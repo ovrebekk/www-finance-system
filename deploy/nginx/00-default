@@ -1,0 +1,12 @@
+# Reference copy of /etc/nginx/sites-available/00-default (already on the server).
+# Refuses unknown hostnames and direct-IP requests at the TLS handshake.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
+    ssl_reject_handshake on;
+}

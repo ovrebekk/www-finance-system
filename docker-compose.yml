@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    image: finance:latest
+    container_name: finance
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    # Loopback only: nginx on the host is the only way in.
+    ports:
+      - '127.0.0.1:${APP_PORT:-3005}:3000'
+    volumes:
+      - finance-data:/app/data
+
+volumes:
+  finance-data:

@@ -1,0 +1,27 @@
+# /etc/nginx/sites-available/finance
+# Copied from wine-cellar.conf. Enable with:
+#   sudo ln -s /etc/nginx/sites-available/finance /etc/nginx/sites-enabled/finance
+#   sudo nginx -t && sudo systemctl reload nginx
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name finance.ovrebekk.no;
+
+    include snippets/ovrebekk-ssl.conf;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy same-origin always;
+
+    # Backup restore / CSV import uploads
+    client_max_body_size 20m;
+
+    location / {
+        proxy_pass http://127.0.0.1:3005;
+        # Must be inside the location: a location with its own proxy_set_header
+        # inherits none from the server level.
+        include snippets/proxy-headers.conf;
+    }
+}

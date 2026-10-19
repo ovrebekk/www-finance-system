@@ -1,0 +1,24 @@
+{
+  "name": "finance",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/shared",
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run build -w packages/shared && npm run build -w apps/api && npm run build -w apps/web",
+    "dev": "npm run build -w packages/shared && npm run dev --workspaces --if-present",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "test": "npm run build -w packages/shared && npm run test --workspaces --if-present",
+    "typecheck": "npm run build -w packages/shared && npm run typecheck --workspaces --if-present",
+    "db:generate": "npm run db:generate -w apps/api",
+    "set-password": "npm run set-password -w apps/api --"
+  }
+}
