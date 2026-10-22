@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { keys, useMe, useUsers } from '../lib/queries';
+import { useOfflineQueue } from '../lib/offline';
 import { PageHeader } from '../components/ui';
 
 export function SettingsPage() {
@@ -9,6 +10,7 @@ export function SettingsPage() {
   const isAdmin = Boolean(me.data?.permissions.includes('users:admin'));
   const canBackup = Boolean(me.data?.permissions.includes('settings:admin'));
   const users = useUsers(isAdmin);
+  const queued = useOfflineQueue().length;
 
   const signOut = async () => {
     await api('/auth/logout', { method: 'POST' }).catch(() => undefined);
@@ -29,6 +31,12 @@ export function SettingsPage() {
         <button type="button" className="button" onClick={signOut}>
           Sign out
         </button>
+        {queued > 0 && (
+          <p className="muted small">
+            {queued === 1 ? '1 transaction saved offline is' : `${queued} transactions saved offline are`} still on this device. They
+            are sent after the next sign-in here.
+          </p>
+        )}
       </section>
 
       {canBackup && (

@@ -11,7 +11,7 @@ import {
 import { errorMessage } from '../lib/api';
 import { today } from '../lib/dates';
 import { useAccounts, useCategories, useRecipients, useTags } from '../lib/queries';
-import { lastAccountId } from '../lib/transactions';
+import { lastAccountId, rememberAccount } from '../lib/transactions';
 import { CategorySelect } from './CategorySelect';
 import { Modal } from './Modal';
 import { TagPicker } from './TagPicker';
@@ -194,6 +194,7 @@ export function TransactionForm({
     const body = build();
     if (typeof body === 'string') return setError(body);
     setError(undefined);
+    if (!initial) rememberAccount(body.accountId);
     setBusy(true);
     try {
       await save(body, addAnother);

@@ -12,7 +12,7 @@ import { transactionDependents, useAccounts, useCategories, useDashboard, useMe 
 import { toInput, TransactionForm } from '../components/TransactionForm';
 import { TransactionRow, useNames } from '../components/TransactionRow';
 import { useToast } from '../components/Toast';
-import { useSaveTransaction } from '../lib/transactions';
+import { savedMessage, useSaveTransaction } from '../lib/transactions';
 import { useUndoableDelete } from '../lib/useUndoableDelete';
 import { Empty, ErrorBox, Loading, PageHeader } from '../components/ui';
 
@@ -288,8 +288,7 @@ function Recent({ recent }: { recent: Transaction[] }) {
             setEditing(undefined);
           }}
           save={async (body) => {
-            await save.mutateAsync({ id: editing.id, body });
-            toast.show('Transaction saved');
+            toast.show(savedMessage(await save.mutateAsync({ id: editing.id, body })));
             setEditing(undefined);
           }}
         />

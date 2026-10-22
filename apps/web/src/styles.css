@@ -327,3 +327,11 @@ input[type='color'] { width: 44px; padding: 2px; }
 .mini-table td:first-child { text-transform: capitalize; }
 .data-table.flat { border: 0; box-shadow: none; }
 @media (max-width: 640px) { .data-table.flat tr { box-shadow: none; } }
+
+/* ---- Offline ---- */
+.offline-bar { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; align-items: center; padding: 0.55rem 0.8rem; margin-bottom: 1rem; border-radius: 8px; background: var(--primary-soft); color: var(--text); font-size: 0.9rem; }
+.offline-bar.is-offline { background: var(--surface-2); border: 1px dashed var(--border); }
+.link-button { border: 0; background: transparent; color: var(--primary); font: inherit; font-weight: 600; cursor: pointer; padding: 0 0.4rem; text-decoration: underline; }
+.queued-section { margin-bottom: 1rem; }
+.queued-section h2 { font-size: 1rem; }
+.badge-warn { background: var(--danger-soft); color: var(--danger); }

@@ -1,19 +1,43 @@
 import type { Transaction, TransactionInput } from '@finance/shared';
-import { api } from './api';
+import { api, RequestError } from './api';
+import { enqueue, newClientId } from './offline';
 import { transactionDependents, useApiMutation } from './queries';
 
 export type SaveTransactionVars = { id?: number; body: TransactionInput };
+export type SaveResult = { queued: false; transaction: Transaction } | { queued: true };
 
-/** Creates (no id) or replaces a transaction, then refreshes everything it affects. */
+/**
+ * Creates (no id) or replaces a transaction, then refreshes everything it
+ * affects. A new transaction that cannot reach the server is queued on this
+ * device instead (see offline.ts); editing a stored one needs a connection.
+ */
 export function useSaveTransaction() {
-  return useApiMutation(
-    ({ id, body }: SaveTransactionVars) =>
-      id === undefined
-        ? api<Transaction>('/transactions', { method: 'POST', body })
-        : api<Transaction>(`/transactions/${id}`, { method: 'PUT', body }),
-    transactionDependents,
-  );
+  return useApiMutation(async ({ id, body }: SaveTransactionVars): Promise<SaveResult> => {
+    if (id !== undefined) {
+      try {
+        return { queued: false, transaction: await api<Transaction>(`/transactions/${id}`, { method: 'PUT', body }) };
+      } catch (err) {
+        if (err instanceof RequestError && err.status === 0) {
+          throw new RequestError(0, 'offline', 'You are offline. Changes to saved transactions need a connection; new ones can be added offline.');
+        }
+        throw err;
+      }
+    }
+    const clientId = body.clientId ?? newClientId();
+    try {
+      return { queued: false, transaction: await api<Transaction>('/transactions', { method: 'POST', body: { ...body, clientId } }) };
+    } catch (err) {
+      if (err instanceof RequestError && err.status === 0) {
+        enqueue(body, clientId);
+        return { queued: true };
+      }
+      throw err;
+    }
+  }, transactionDependents);
 }
+
+export const savedMessage = (result: SaveResult) =>
+  result.queued ? 'Saved on this device. It will be sent when you are back online.' : 'Transaction saved';
 
 const LAST_ACCOUNT_KEY = 'finance.lastAccountId';
 

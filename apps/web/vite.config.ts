@@ -30,7 +30,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
           {
-            // Read-only offline access to the last data seen; full offline entry arrives in phase 2.
+            // Offline: lists and pickers show the last data seen; new transactions are queued in the app (src/lib/offline.ts).
             urlPattern: ({ url, request }) =>
               url.pathname.startsWith('/api/v1/') && request.method === 'GET' && !url.pathname.includes('/settings/backup'),
             handler: 'NetworkFirst',

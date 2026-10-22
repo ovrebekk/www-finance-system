@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { useEffect } from 'react';
+import { OfflineStatus } from './OfflineStatus';
 import { QuickAdd } from './QuickAdd';
 
 const NAV = [
@@ -46,6 +47,7 @@ export function Layout() {
       </nav>
       <div className="nav-scrim" onClick={() => setOpen(false)} aria-hidden="true" />
       <main className="content">
+        <OfflineStatus />
         <Outlet />
       </main>
       {location.pathname !== '/transactions' && <QuickAdd />}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSaveTransaction } from '../lib/transactions';
+import { savedMessage, useSaveTransaction } from '../lib/transactions';
 import { useToast } from './Toast';
 import { TransactionForm } from './TransactionForm';
 
@@ -21,8 +21,7 @@ export function QuickAdd() {
           allowAddAnother
           onClose={() => setOpen(false)}
           save={async (body, addAnother) => {
-            await save.mutateAsync({ body });
-            toast.show('Transaction saved');
+            toast.show(savedMessage(await save.mutateAsync({ body })));
             if (addAnother) setFormKey((k) => k + 1);
             else setOpen(false);
           }}

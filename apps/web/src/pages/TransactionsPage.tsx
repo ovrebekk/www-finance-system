@@ -23,7 +23,8 @@ import {
   useSavedFilters,
   useTags,
 } from '../lib/queries';
-import { useSaveTransaction } from '../lib/transactions';
+import { savedMessage, useSaveTransaction } from '../lib/transactions';
+import { queuedAsTransaction, removeQueued, updateQueued, useOfflineQueue, type QueuedTransaction } from '../lib/offline';
 import { useUndoableDelete } from '../lib/useUndoableDelete';
 import { Modal } from '../components/Modal';
 import { toInput, TransactionForm } from '../components/TransactionForm';
@@ -50,7 +51,7 @@ function queryToFilter(params: URLSearchParams): TransactionFilter {
   return parsed.success ? parsed.data : {};
 }
 
-type Editing = { mode: 'new' } | { mode: 'edit'; transaction: Transaction };
+type Editing = { mode: 'new' } | { mode: 'edit'; transaction: Transaction } | { mode: 'queued'; entry: QueuedTransaction };
 
 export function TransactionsPage() {
   const [params, setParams] = useSearchParams();
@@ -79,6 +80,7 @@ export function TransactionsPage() {
   const rows = (list.data?.pages ?? []).flatMap((p) => p.items).filter((t) => !hidden.has(t.id));
 
   const names = useNames();
+  const queue = useOfflineQueue();
 
   const deleteTransaction = (t: Transaction) => {
     setEditing(undefined);
@@ -97,6 +99,27 @@ export function TransactionsPage() {
       />
 
       <Filters filter={filter} query={query} setFilter={setFilter} patchFilter={patchFilter} />
+
+      {queue.length > 0 && (
+        <section className="queued-section">
+          <h2>Saved on this device, not sent yet</h2>
+          <table className="data-table transaction-table">
+            <tbody>
+              {queue.map((q) => (
+                <TransactionRow
+                  key={q.clientId}
+                  t={queuedAsTransaction(q)}
+                  names={names}
+                  onOpen={() => setEditing({ mode: 'queued', entry: q })}
+                  badge={
+                    q.error ? <span className="badge badge-warn">Refused: {q.error}</span> : <span className="badge">Waiting</span>
+                  }
+                />
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {list.isPending ? (
         <Loading />
@@ -147,7 +170,23 @@ export function TransactionsPage() {
         </>
       )}
 
-      {editing && (
+      {editing?.mode === 'queued' && (
+        <TransactionForm
+          title="Edit unsent transaction"
+          initial={editing.entry.body}
+          onClose={() => setEditing(undefined)}
+          onDelete={() => {
+            removeQueued(editing.entry.clientId);
+            toast.show('Removed the unsent transaction');
+            setEditing(undefined);
+          }}
+          save={async (body) => {
+            updateQueued(editing.entry.clientId, body);
+            setEditing(undefined);
+          }}
+        />
+      )}
+      {editing && editing.mode !== 'queued' && (
         <TransactionForm
           key={formKey}
           title={editing.mode === 'edit' ? 'Edit transaction' : 'New transaction'}
@@ -156,8 +195,7 @@ export function TransactionsPage() {
           onClose={() => setEditing(undefined)}
           onDelete={editing.mode === 'edit' ? () => deleteTransaction(editing.transaction) : undefined}
           save={async (body, addAnother) => {
-            await save.mutateAsync({ id: editing.mode === 'edit' ? editing.transaction.id : undefined, body });
-            toast.show('Transaction saved');
+            toast.show(savedMessage(await save.mutateAsync({ id: editing.mode === 'edit' ? editing.transaction.id : undefined, body })));
             if (addAnother) setFormKey((k) => k + 1);
             else setEditing(undefined);
           }}

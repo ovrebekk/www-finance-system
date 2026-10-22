@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Route, Routes } from 'react-router';
-import { setUnauthorizedHandler } from './lib/api';
+import { RequestError, setUnauthorizedHandler } from './lib/api';
 import { keys, useMe } from './lib/queries';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
@@ -24,6 +24,18 @@ export function App() {
   }, [qc]);
 
   if (me.isPending) return <Loading />;
+  if (!me.data && me.error instanceof RequestError && me.error.status === 0) {
+    return (
+      <div className="login">
+        <div className="login-card">
+          <p>You are offline, and this device has no saved copy of the app's data yet. Connect once and sign in to use it offline.</p>
+          <button type="button" className="button button-primary" onClick={() => void me.refetch()}>
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (!me.data) return <LoginPage />;
 
   return (
