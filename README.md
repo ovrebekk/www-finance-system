@@ -13,8 +13,8 @@ lines, recipients, nested categories, tags and reports. It replaces the old
 | Phase | Scope | State |
 | --- | --- | --- |
 | 1. Foundation | Repo, SQLite schema (incl. users, roles, transactions, split lines, per-line tags), login, CRUD for accounts, categories, recipients, tags, deploy files | **Done** |
-| 2. Transactions | Entry/edit incl. splits, filtered list, saved filters, dashboard, offline entry | Next |
-| 3. Reports and migration | Seven reports, CSV/PDF export, migration from the old SQLite file | |
+| 2. Transactions | Entry/edit incl. splits, filtered list, saved filters, dashboard, offline entry | **Done** |
+| 3. Reports and migration | Seven reports, CSV/PDF export, migration from the old SQLite file | Next |
 | 4. Later | Role editor, budgets, recurring transactions, receipts, bank CSV import | |
 
 ## Repository layout
@@ -162,7 +162,7 @@ A backup can also be downloaded from **Settings → Download backup**.
 - Container port bound to loopback only; nginx adds HSTS, nosniff,
   `X-Frame-Options DENY` and `Referrer-Policy same-origin`.
 
-## API (phase 1)
+## API
 
 All under `/api/v1`, JSON, same-origin session cookie.
 
@@ -175,3 +175,36 @@ All under `/api/v1`, JSON, same-origin session cookie.
 | Tags | `GET/POST /tags`, `GET/PATCH/DELETE /tags/:id`, `POST /tags/:id/merge` | Delete removes the tag from lines |
 | Settings | `GET /settings/backup`, `GET /users`, `GET /roles` | |
 | Health | `GET /api/health` | No auth |
+| Transactions | `GET/POST /transactions`, `GET/PUT/DELETE /transactions/:id` | See below |
+| Saved filters | `GET/POST /saved-filters`, `PATCH/DELETE /saved-filters/:id` | Per user; `filter` uses the list query fields |
+| Dashboard | `GET /dashboard?month=YYYY-MM` | Month and previous month totals, six-month trend, expense by top-level category, recent transactions |
+
+### Transactions
+
+- Amounts are integers in øre and always positive; the type gives the sign.
+- Expense and income have one or more `lines` (`categoryId`, `amount`, `memo`,
+  `tagIds`); more than one line is a split. The amount is the sum of the lines
+  (if `amount` is sent too, it must match). Line categories must be of the same
+  kind as the transaction; `categoryId: null` is uncategorised.
+- Transfers have `toAccountId` and `amount` and no lines.
+- `recipientId`, or `recipientName` to use an existing recipient with that name
+  (case-insensitive) or create one.
+- `PUT` replaces the whole transaction, lines included.
+- `clientId` (UUID) makes a create idempotent: posting the same `clientId`
+  again returns the stored transaction (200) instead of a duplicate.
+- `GET /transactions` filters: `from`, `to`, `accountId` (either side of a
+  transfer), `categoryId` (with subcategories), `uncategorized=true`,
+  `recipientId`, `tagId`, `type`, `status`, `minAmount`, `maxAmount` (øre), `q`
+  (description, recipient name, line memo), plus `limit` (≤ 500) and `offset`.
+  Returns `{ items, count, income, expense, net }`; with a category or tag
+  filter the totals count only the matching lines. Newest first.
+
+## Offline use
+
+The service worker caches the app and the last API responses it saw, so the
+installed app opens and shows lists offline. A new transaction saved without a
+connection is queued in the browser (`localStorage`, see
+`apps/web/src/lib/offline.ts`) and sent when the app is online again; the
+`clientId` makes retries safe. Unsent transactions are listed at the top of
+**Transactions**, where they can be edited or removed. Editing or deleting a
+stored transaction needs a connection.
