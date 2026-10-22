@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
-import { formatNok, type Tag, type Transaction } from '@finance/shared';
+import { useMemo, type ReactNode } from 'react';
+import { buildCategoryTree, flattenTree, formatNok, type Tag, type Transaction } from '@finance/shared';
 import { formatDay } from '../lib/dates';
+import { useAccounts, useCategories, useRecipients, useTags } from '../lib/queries';
 import { TagChips } from './TagPicker';
 
 /** Lookup tables for showing ids as names. */
@@ -9,6 +10,22 @@ export interface Names {
   recipient: Map<number, string>;
   category: Map<number, string>;
   tag: Map<number, Tag>;
+}
+
+export function useNames(): Names {
+  const accounts = useAccounts();
+  const categories = useCategories();
+  const recipients = useRecipients();
+  const tags = useTags();
+  return useMemo(
+    () => ({
+      account: new Map((accounts.data ?? []).map((a) => [a.id, a.name])),
+      recipient: new Map((recipients.data ?? []).map((r) => [r.id, r.name])),
+      category: new Map(flattenTree(buildCategoryTree(categories.data ?? [])).map((c) => [c.id, c.path])),
+      tag: new Map((tags.data ?? []).map((t) => [t.id, t])),
+    }),
+    [accounts.data, recipients.data, categories.data, tags.data],
+  );
 }
 
 /** Signed display amount: expenses negative, income positive, transfers unsigned. */
