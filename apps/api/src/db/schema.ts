@@ -113,6 +113,8 @@ export const transactions = sqliteTable(
     recipientId: integer('recipient_id').references(() => recipients.id, { onDelete: 'restrict' }),
     description: text('description'),
     status: text('status', { enum: ['pending', 'cleared', 'reconciled'] }).notNull().default('cleared'),
+    /** Client-generated UUID; lets an offline-queued create be retried without duplicates. */
+    clientId: text('client_id'),
     legacyId: text('legacy_id'),
     ...audit(),
   },
@@ -121,6 +123,7 @@ export const transactions = sqliteTable(
     index('transactions_account_idx').on(t.accountId, t.date),
     index('transactions_to_account_idx').on(t.toAccountId),
     index('transactions_recipient_idx').on(t.recipientId),
+    uniqueIndex('transactions_client_id_unique').on(t.clientId),
   ],
 );
 
@@ -152,4 +155,21 @@ export const transactionLineTags = sqliteTable(
       .references(() => tags.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.lineId, t.tagId] }), index('line_tags_tag_idx').on(t.tagId)],
+);
+
+/** A named set of transaction-list filters, private to the user who saved it. */
+export const savedFilters = sqliteTable(
+  'saved_filters',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    /** JSON, see @finance/shared transactionFilterSchema. */
+    filter: text('filter', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    createdAt: text('created_at').notNull().default(now),
+    updatedAt: text('updated_at').notNull().default(now),
+  },
+  (t) => [uniqueIndex('saved_filters_user_name_unique').on(t.userId, sql`lower(${t.name})`)],
 );

@@ -101,3 +101,90 @@ export const roleInputSchema = z.object({
   name,
   permissions: z.array(z.enum(PERMISSIONS)),
 });
+
+// ---- Transactions ----
+export const transactionLineInputSchema = z.object({
+  categoryId: idSchema.nullable().optional().transform((v) => v ?? null),
+  amount: ore.refine((v) => v > 0, 'Line amounts must be greater than zero'),
+  memo: z.string().trim().max(500).optional().nullable().transform((v) => (v ? v : null)),
+  tagIds: z.array(idSchema).max(50).default([]),
+});
+
+/**
+ * Expense and income carry one or more lines (more than one is a split) and
+ * their amount is the sum of the lines. Transfers carry no lines; their
+ * amount is given directly and they need a destination account.
+ */
+export const transactionInputSchema = z
+  .object({
+    type: z.enum(TRANSACTION_TYPES),
+    date: isoDate,
+    accountId: idSchema,
+    toAccountId: idSchema.nullable().optional().transform((v) => v ?? null),
+    recipientId: idSchema.nullable().optional().transform((v) => v ?? null),
+    /** Used when recipientId is empty: an existing recipient with this name, or a new one. */
+    recipientName: z.string().trim().max(100).optional().nullable().transform((v) => (v ? v : null)),
+    description: z.string().trim().max(500).optional().nullable().transform((v) => (v ? v : null)),
+    status: z.enum(TRANSACTION_STATUSES).default('cleared'),
+    /** Transfers only. */
+    amount: ore.optional(),
+    lines: z.array(transactionLineInputSchema).max(100).default([]),
+    /** Client-generated id that makes offline-queued creates safe to retry. */
+    clientId: z.string().uuid().optional().nullable().transform((v) => v ?? null),
+  })
+  .superRefine((t, ctx) => {
+    if (t.type === 'transfer') {
+      if (t.toAccountId == null) ctx.addIssue({ code: 'custom', path: ['toAccountId'], message: 'Choose the account to transfer to' });
+      else if (t.toAccountId === t.accountId)
+        ctx.addIssue({ code: 'custom', path: ['toAccountId'], message: 'Transfer to a different account' });
+      if (t.amount === undefined || t.amount <= 0)
+        ctx.addIssue({ code: 'custom', path: ['amount'], message: 'Amount must be greater than zero' });
+      if (t.lines.length > 0) ctx.addIssue({ code: 'custom', path: ['lines'], message: 'Transfers have no category lines' });
+    } else {
+      if (t.lines.length === 0) ctx.addIssue({ code: 'custom', path: ['lines'], message: 'Add at least one line' });
+      if (t.toAccountId != null) ctx.addIssue({ code: 'custom', path: ['toAccountId'], message: 'Only transfers have a destination account' });
+      if (t.amount !== undefined && t.amount !== t.lines.reduce((s, l) => s + l.amount, 0))
+        ctx.addIssue({ code: 'custom', path: ['amount'], message: 'The split lines must add up to the total' });
+    }
+  });
+export type TransactionInput = z.input<typeof transactionInputSchema>;
+export type TransactionLineInput = z.input<typeof transactionLineInputSchema>;
+
+const optionalId = z.preprocess((v) => (v === '' || v === null ? undefined : v), idSchema.optional());
+const optionalOre = z.preprocess((v) => (v === '' || v === null ? undefined : v), z.coerce.number().int().optional());
+const optionalDate = z.preprocess((v) => (v === '' || v === null ? undefined : v), isoDate.optional());
+
+/** Filters for the transaction list. Also the stored shape of a saved filter. */
+export const transactionFilterSchema = z.object({
+  from: optionalDate,
+  to: optionalDate,
+  accountId: optionalId,
+  /** Matches the category and all its subcategories. 0 is not allowed; use `uncategorized`. */
+  categoryId: optionalId,
+  uncategorized: z.preprocess((v) => v === true || v === 'true' || v === '1', z.boolean()).optional(),
+  recipientId: optionalId,
+  tagId: optionalId,
+  type: z.preprocess((v) => (v === '' ? undefined : v), z.enum(TRANSACTION_TYPES).optional()),
+  status: z.preprocess((v) => (v === '' ? undefined : v), z.enum(TRANSACTION_STATUSES).optional()),
+  /** øre, compared with the transaction total. */
+  minAmount: optionalOre,
+  maxAmount: optionalOre,
+  q: z.preprocess((v) => (v === '' ? undefined : v), z.string().trim().max(200).optional()),
+});
+export type TransactionFilter = z.infer<typeof transactionFilterSchema>;
+
+export const transactionListQuerySchema = transactionFilterSchema.extend({
+  limit: z.coerce.number().int().min(1).max(500).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+// ---- Saved filters ----
+export const savedFilterInputSchema = z.object({
+  name,
+  filter: transactionFilterSchema,
+});
+export const savedFilterUpdateSchema = savedFilterInputSchema.partial();
+
+// ---- Dashboard ----
+export const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Use the format YYYY-MM');
+export const dashboardQuerySchema = z.object({ month: monthSchema.optional() });

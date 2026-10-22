@@ -14,9 +14,12 @@ import { HttpError } from './lib/errors.js';
 import { accountRoutes } from './routes/accounts.js';
 import { authRoutes } from './routes/auth.js';
 import { categoryRoutes } from './routes/categories.js';
+import { dashboardRoutes } from './routes/dashboard.js';
 import { recipientRoutes } from './routes/recipients.js';
+import { savedFilterRoutes } from './routes/savedFilters.js';
 import { settingsRoutes } from './routes/settings.js';
 import { tagRoutes } from './routes/tags.js';
+import { transactionRoutes } from './routes/transactions.js';
 
 const SESSION_SALT = 'finance.ovrebekk'; // 16 bytes, app-specific
 const COOKIE_NAME = 'finance_session';
@@ -93,6 +96,9 @@ export async function buildApp(config: Config): Promise<BuiltApp> {
   categoryRoutes(app, ctx);
   recipientRoutes(app, ctx);
   tagRoutes(app, ctx);
+  transactionRoutes(app, ctx);
+  savedFilterRoutes(app, ctx);
+  dashboardRoutes(app, ctx);
   settingsRoutes(app, ctx);
 
   // Built React app: static files plus a client-side routing fallback to index.html.

@@ -1,4 +1,4 @@
-import type { AccountType, CategoryKind } from './schemas.js';
+import type { AccountType, CategoryKind, TransactionFilter, TransactionStatus, TransactionType } from './schemas.js';
 import type { Permission } from './permissions.js';
 
 export interface Me {
@@ -56,4 +56,70 @@ export interface ApiError {
   error: string;
   message: string;
   details?: unknown;
+}
+
+export interface TransactionLine {
+  id: number;
+  categoryId: number | null;
+  /** øre, > 0 */
+  amount: number;
+  memo: string | null;
+  tagIds: number[];
+}
+
+export interface Transaction {
+  id: number;
+  type: TransactionType;
+  date: string;
+  /** øre, > 0; the sign follows from the type. */
+  amount: number;
+  accountId: number;
+  toAccountId: number | null;
+  recipientId: number | null;
+  description: string | null;
+  status: TransactionStatus;
+  clientId: string | null;
+  lines: TransactionLine[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransactionPage {
+  items: Transaction[];
+  /** Number of matching transactions. */
+  count: number;
+  /** Income minus expense of the matching lines, in øre (transfers count as 0). */
+  net: number;
+  income: number;
+  expense: number;
+}
+
+export interface SavedFilter {
+  id: number;
+  name: string;
+  filter: TransactionFilter;
+}
+
+export interface CategoryTotal {
+  /** Top-level category, or null for uncategorised lines. */
+  categoryId: number | null;
+  amount: number;
+}
+
+export interface MonthSummary {
+  month: string;
+  income: number;
+  expense: number;
+  net: number;
+}
+
+export interface Dashboard {
+  month: string;
+  current: MonthSummary;
+  previous: MonthSummary;
+  /** Expense per top-level category this month, largest first. */
+  expenseByCategory: CategoryTotal[];
+  /** Last six months, oldest first, including this one. */
+  trend: MonthSummary[];
+  recent: Transaction[];
 }

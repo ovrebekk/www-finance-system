@@ -34,7 +34,7 @@ export async function login(app: FastifyInstance, creds = ADMIN): Promise<string
 
 /** Small client bound to a session cookie. */
 export function client(app: FastifyInstance, cookie: string) {
-  const call = (method: 'GET' | 'POST' | 'PATCH' | 'DELETE') => (url: string, payload?: unknown) =>
+  const call = (method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE') => (url: string, payload?: unknown) =>
     app.inject({ method, url, payload: payload as never, headers: { cookie } });
-  return { get: call('GET'), post: call('POST'), patch: call('PATCH'), del: call('DELETE') };
+  return { get: call('GET'), post: call('POST'), put: call('PUT'), patch: call('PATCH'), del: call('DELETE') };
 }
