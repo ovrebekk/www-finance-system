@@ -227,3 +227,52 @@ input[type='color'] { width: 44px; padding: 2px; }
 .login { min-height: 100vh; display: grid; place-items: center; padding: 1rem; }
 .login-card { width: min(380px, 100%); display: flex; flex-direction: column; gap: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; box-shadow: var(--shadow); }
 .login-brand { justify-content: center; font-size: 1.4rem; margin-bottom: 0.5rem; }
+
+/* ---- Transactions ---- */
+.nowrap { white-space: nowrap; }
+.align-start { align-self: flex-start; }
+.push-left { margin-right: auto; }
+.amount.positive { color: var(--primary); }
+.amount-input { font-variant-numeric: tabular-nums; }
+.segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-2); }
+.segment { border: 0; border-radius: 8px; padding: 0.5rem; background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; min-height: 38px; }
+.segment[aria-checked='true'] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.tag-picker, .tag-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.tag-list { margin-top: 0.3rem; }
+.tag-toggle { cursor: pointer; font: inherit; font-size: 0.85rem; min-height: 32px; opacity: 0.6; background: transparent; }
+.tag-toggle[aria-pressed='true'] { opacity: 1; background: color-mix(in srgb, var(--tag) 22%, transparent); font-weight: 600; }
+.tag-chip-small { font-size: 0.75rem; padding: 0 0.45rem; }
+.split { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.75rem 0.75rem; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.split-line { display: flex; flex-direction: column; gap: 0.4rem; padding-bottom: 0.6rem; border-bottom: 1px dashed var(--border); }
+.split-line-main { display: grid; grid-template-columns: 1fr 7.5rem 40px; gap: 0.4rem; align-items: center; }
+.split-amount { text-align: right; }
+.split-footer { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.remaining-off { color: var(--negative); font-weight: 600; }
+.row-link { all: unset; cursor: pointer; }
+.row-link:hover strong { text-decoration: underline; }
+.row-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.totals { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--muted); }
+.totals strong { color: var(--text); }
+.load-more { display: flex; justify-content: center; margin: 1rem 0; }
+.filters { display: flex; flex-direction: column; gap: 0.75rem; }
+.filter-search { display: flex; gap: 0.5rem; }
+.filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.6rem; }
+.filter-toggle { display: none; }
+.filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.saved-select { width: auto; max-width: 260px; min-height: 36px; }
+.fab { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 50; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--primary); color: var(--on-primary); font-size: 2rem; line-height: 1; box-shadow: 0 6px 18px rgb(0 0 0 / 25%); cursor: pointer; }
+.fab:hover { background: var(--primary-hover); }
+@media (max-width: 640px) {
+  .filter-toggle { display: inline-flex; }
+  .search-button { display: none; }
+  .filters:not(.filters-open) .filter-grid { display: none; }
+  .transaction-table tr { display: grid; grid-template-columns: 1fr auto; gap: 0.1rem 0.75rem; padding: 0.6rem 0.9rem; }
+  .transaction-table td { display: block; padding: 0; }
+  .transaction-table td[data-label]::before { display: none; }
+  .transaction-table td[data-label='Name'] { grid-column: 1; grid-row: 1 / span 3; }
+  .transaction-table td[data-label='Amount'] { grid-column: 2; grid-row: 1; font-weight: 600; }
+  .transaction-table td[data-label='Date'], .transaction-table td[data-label='Account'] { grid-column: 2; text-align: right; font-size: 0.8rem; color: var(--muted); }
+  .transaction-table td[data-label='Date'] { grid-row: 2; }
+  .transaction-table td[data-label='Account'] { grid-row: 3; }
+  .split-line-main { grid-template-columns: 1fr 6.5rem 40px; }
+}

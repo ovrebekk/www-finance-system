@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { useEffect } from 'react';
+import { QuickAdd } from './QuickAdd';
 
 const NAV = [
   { to: '/', label: 'Dashboard', end: true },
@@ -47,6 +48,7 @@ export function Layout() {
       <main className="content">
         <Outlet />
       </main>
+      {location.pathname !== '/transactions' && <QuickAdd />}
     </div>
   );
 }

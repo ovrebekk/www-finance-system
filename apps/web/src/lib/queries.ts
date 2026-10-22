@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
-import type { Account, Category, Me, Recipient, Tag } from '@finance/shared';
+import type { Account, Category, Dashboard, Me, Recipient, SavedFilter, Tag } from '@finance/shared';
 import { api } from './api';
 
 export const keys = {
@@ -9,7 +9,20 @@ export const keys = {
   recipients: ['recipients'] as const,
   tags: ['tags'] as const,
   users: ['users'] as const,
+  transactions: ['transactions'] as const,
+  savedFilters: ['saved-filters'] as const,
+  dashboard: ['dashboard'] as const,
 };
+
+/** Everything a change to transactions can affect (balances, usage counts, totals). */
+export const transactionDependents = [
+  keys.transactions,
+  keys.dashboard,
+  keys.accounts,
+  keys.recipients,
+  keys.categories,
+  keys.tags,
+];
 
 export const useMe = () =>
   useQuery({ queryKey: keys.me, queryFn: () => api<Me>('/auth/me'), retry: false, staleTime: 5 * 60_000 });
@@ -17,6 +30,14 @@ export const useAccounts = () => useQuery({ queryKey: keys.accounts, queryFn: ()
 export const useCategories = () => useQuery({ queryKey: keys.categories, queryFn: () => api<Category[]>('/categories') });
 export const useRecipients = () => useQuery({ queryKey: keys.recipients, queryFn: () => api<Recipient[]>('/recipients') });
 export const useTags = () => useQuery({ queryKey: keys.tags, queryFn: () => api<Tag[]>('/tags') });
+
+export const useSavedFilters = () =>
+  useQuery({ queryKey: keys.savedFilters, queryFn: () => api<SavedFilter[]>('/saved-filters') });
+export const useDashboard = (month?: string) =>
+  useQuery({
+    queryKey: [...keys.dashboard, month ?? 'current'],
+    queryFn: () => api<Dashboard>(`/dashboard${month ? `?month=${month}` : ''}`),
+  });
 
 export interface UserRow {
   id: number;

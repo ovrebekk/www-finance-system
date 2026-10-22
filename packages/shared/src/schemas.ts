@@ -147,8 +147,26 @@ export const transactionInputSchema = z
         ctx.addIssue({ code: 'custom', path: ['amount'], message: 'The split lines must add up to the total' });
     }
   });
-export type TransactionInput = z.input<typeof transactionInputSchema>;
-export type TransactionLineInput = z.input<typeof transactionLineInputSchema>;
+/** Request body for creating or replacing a transaction (see transactionInputSchema). */
+export interface TransactionInput {
+  type: TransactionType;
+  date: string;
+  accountId: number;
+  toAccountId?: number | null;
+  recipientId?: number | null;
+  recipientName?: string | null;
+  description?: string | null;
+  status?: TransactionStatus;
+  amount?: number;
+  lines?: TransactionLineInput[];
+  clientId?: string | null;
+}
+export interface TransactionLineInput {
+  categoryId?: number | null;
+  amount: number;
+  memo?: string | null;
+  tagIds?: number[];
+}
 
 const optionalId = z.preprocess((v) => (v === '' || v === null ? undefined : v), idSchema.optional());
 const optionalOre = z.preprocess((v) => (v === '' || v === null ? undefined : v), z.coerce.number().int().optional());
