@@ -29,7 +29,7 @@ import { Modal } from '../components/Modal';
 import { toInput, TransactionForm } from '../components/TransactionForm';
 import { useToast } from '../components/Toast';
 import { Empty, ErrorBox, Field, Loading, PageHeader } from '../components/ui';
-import { TransactionRow } from '../components/TransactionRow';
+import { TransactionRow, useNames } from '../components/TransactionRow';
 
 const PAGE_SIZE = 50;
 const FILTER_KEYS = Object.keys(transactionFilterSchema.shape) as (keyof TransactionFilter)[];
@@ -59,10 +59,6 @@ export function TransactionsPage() {
   const setFilter = (next: TransactionFilter) => setParams(new URLSearchParams(filterToQuery(next)), { replace: true });
   const patchFilter = (patch: Partial<TransactionFilter>) => setFilter({ ...filter, ...patch });
 
-  const accounts = useAccounts();
-  const categories = useCategories();
-  const recipients = useRecipients();
-  const tags = useTags();
   const toast = useToast();
   const save = useSaveTransaction();
   const [editing, setEditing] = useState<Editing>();
@@ -82,15 +78,7 @@ export function TransactionsPage() {
   const first = list.data?.pages[0];
   const rows = (list.data?.pages ?? []).flatMap((p) => p.items).filter((t) => !hidden.has(t.id));
 
-  const names = useMemo(
-    () => ({
-      account: new Map((accounts.data ?? []).map((a) => [a.id, a.name])),
-      recipient: new Map((recipients.data ?? []).map((r) => [r.id, r.name])),
-      category: new Map(flattenTree(buildCategoryTree(categories.data ?? [])).map((c) => [c.id, c.path])),
-      tag: new Map((tags.data ?? []).map((t) => [t.id, t])),
-    }),
-    [accounts.data, recipients.data, categories.data, tags.data],
-  );
+  const names = useNames();
 
   const deleteTransaction = (t: Transaction) => {
     setEditing(undefined);
