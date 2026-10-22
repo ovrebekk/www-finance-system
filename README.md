@@ -41,6 +41,11 @@ npm run dev:api     # API on http://127.0.0.1:3000 (reads ../../.env if present)
 npm run dev:web     # Vite on http://localhost:5173, proxies /api to the API
 ```
 
+In development both servers read `@finance/shared` straight from
+`packages/shared/src` (the `development` export condition), so changes there
+apply without a build step. Production, tests and type checks use the built
+`packages/shared/dist`; the root `build`, `test` and `typecheck` scripts build it first.
+
 For a first login in development, create `.env` in the repo root:
 
 ```
