@@ -6,3 +6,6 @@ data/
 *.sqlite-*
 coverage/
 .DS_Store
+
+# Exports from the old PersonalFinanceWPF app (personal data)
+data_exports/

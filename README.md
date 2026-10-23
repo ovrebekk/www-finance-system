@@ -14,7 +14,7 @@ lines, recipients, nested categories, tags and reports. It replaces the old
 | --- | --- | --- |
 | 1. Foundation | Repo, SQLite schema (incl. users, roles, transactions, split lines, per-line tags), login, CRUD for accounts, categories, recipients, tags, deploy files | **Done** |
 | 2. Transactions | Entry/edit incl. splits, filtered list, saved filters, dashboard, offline entry | **Done** |
-| 3. Reports and migration | Seven reports, CSV/PDF export, migration from the old SQLite file | Next |
+| 3. Reports and migration | Seven reports, CSV/PDF export, migration from the old system (CSV import done) | Next |
 | 4. Later | Role editor, budgets, recurring transactions, receipts, bank CSV import | |
 
 ## Repository layout
@@ -183,6 +183,7 @@ All under `/api/v1`, JSON, same-origin session cookie.
 | Transactions | `GET/POST /transactions`, `GET/PUT/DELETE /transactions/:id` | See below |
 | Saved filters | `GET/POST /saved-filters`, `PATCH/DELETE /saved-filters/:id` | Per user; `filter` uses the list query fields |
 | Dashboard | `GET /dashboard?month=YYYY-MM` | Month and previous month totals, six-month trend, expense by top-level category, recent transactions |
+| Import | `POST /import/legacy` | CSV export of the old app, see below |
 
 ### Transactions
 
@@ -203,6 +204,26 @@ All under `/api/v1`, JSON, same-origin session cookie.
   (description, recipient name, line memo), plus `limit` (≤ 500) and `offset`.
   Returns `{ items, count, income, expense, net }`; with a category or tag
   filter the totals count only the matching lines. Newest first.
+
+### Importing from the old app
+
+The old PersonalFinanceWPF app writes a `finance-export-…` folder of CSV files
+(**File → Export to CSV**; format in the "Legacy CSV export format" doc). In
+**Settings → Import from the old app**, choose that folder: the app shows a
+preview (new, merged and already imported rows per table) and imports only
+after you confirm. `POST /import/legacy` takes `{ files: { "<name>.csv": text, … }, dryRun }`
+and needs `settings:admin`.
+
+- Everything is one database transaction: an invalid row (unknown reference,
+  line sum not matching, wrong category kind, unknown format version) rejects
+  the whole import with a list of problems, and nothing is written.
+- Every row keeps its old id in `legacy_id`, so importing the same folder again
+  skips what is already there.
+- Accounts, recipients and tags with the same name (case-insensitive), and
+  categories with the same kind, parent and name, become one row. This also
+  merges into rows created here before the import.
+- Opening balances are 0, as in the old app; `raw/` and the old import rules are not used.
+- Keep exports out of git: `data_exports/` is ignored.
 
 ## Offline use
 

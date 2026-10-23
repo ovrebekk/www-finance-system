@@ -15,6 +15,7 @@ import { accountRoutes } from './routes/accounts.js';
 import { authRoutes } from './routes/auth.js';
 import { categoryRoutes } from './routes/categories.js';
 import { dashboardRoutes } from './routes/dashboard.js';
+import { importRoutes } from './routes/import.js';
 import { recipientRoutes } from './routes/recipients.js';
 import { savedFilterRoutes } from './routes/savedFilters.js';
 import { settingsRoutes } from './routes/settings.js';
@@ -100,6 +101,7 @@ export async function buildApp(config: Config): Promise<BuiltApp> {
   savedFilterRoutes(app, ctx);
   dashboardRoutes(app, ctx);
   settingsRoutes(app, ctx);
+  importRoutes(app, ctx);
 
   // Built React app: static files plus a client-side routing fallback to index.html.
   const webDist = config.webDist && existsSync(join(config.webDist, 'index.html')) ? config.webDist : undefined;

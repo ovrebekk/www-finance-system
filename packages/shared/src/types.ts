@@ -123,3 +123,27 @@ export interface Dashboard {
   trend: MonthSummary[];
   recent: Transaction[];
 }
+
+export type LegacyImportTable = 'accounts' | 'categories' | 'recipients' | 'tags' | 'transactions' | 'lines' | 'lineTags';
+
+export interface LegacyImportCounts {
+  /** Rows in the file. */
+  rows: number;
+  /** New rows written. */
+  created: number;
+  /** Rows mapped onto an existing row with the same name (accounts, categories, recipients, tags). */
+  merged: number;
+  /** Rows whose legacy id was already imported by an earlier run. */
+  skipped: number;
+}
+
+export interface LegacyImportReport {
+  dryRun: boolean;
+  formatVersion: number;
+  exportedAt: string | null;
+  /** Number of warnings the old app wrote into export-summary.txt. */
+  exportWarnings: number;
+  counts: Record<LegacyImportTable, LegacyImportCounts>;
+  /** What the importer changed on the way, e.g. recipients merged by name. */
+  notes: string[];
+}

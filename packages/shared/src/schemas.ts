@@ -206,3 +206,24 @@ export const savedFilterUpdateSchema = savedFilterInputSchema.partial();
 // ---- Dashboard ----
 export const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Use the format YYYY-MM');
 export const dashboardQuerySchema = z.object({ month: monthSchema.optional() });
+
+// ---- Legacy import ----
+/** Files the old PersonalFinanceWPF app writes into its export folder (raw/ is not used). */
+export const LEGACY_EXPORT_FILES = [
+  'export-summary.txt',
+  'accounts.csv',
+  'categories.csv',
+  'recipients.csv',
+  'tags.csv',
+  'transactions.csv',
+  'transaction_lines.csv',
+  'transaction_line_tags.csv',
+] as const;
+export type LegacyExportFile = (typeof LEGACY_EXPORT_FILES)[number];
+
+/** File contents by file name. `dryRun` checks and counts everything, then rolls back. */
+export const legacyImportInputSchema = z.object({
+  files: z.partialRecord(z.enum(LEGACY_EXPORT_FILES), z.string().max(50 * 1024 * 1024)),
+  dryRun: z.boolean().default(false),
+});
+export type LegacyImportInput = z.input<typeof legacyImportInputSchema>;

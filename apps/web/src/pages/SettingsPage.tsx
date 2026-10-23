@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { keys, useMe, useUsers } from '../lib/queries';
 import { useOfflineQueue } from '../lib/offline';
+import { LegacyImport } from '../components/LegacyImport';
 import { PageHeader } from '../components/ui';
 
 export function SettingsPage() {
@@ -51,6 +52,8 @@ export function SettingsPage() {
           <p className="muted small">CSV export of transactions arrives with the transaction list in phase 2.</p>
         </section>
       )}
+
+      {canBackup && <LegacyImport />}
 
       {isAdmin && (
         <section className="card">
