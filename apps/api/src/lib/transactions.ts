@@ -1,6 +1,16 @@
 import type Database from 'better-sqlite3';
-import { descendantIds, type Transaction, type TransactionFilter, type TransactionLine } from '@finance/shared';
-import { notFound } from './errors.js';
+import type { z } from 'zod';
+import {
+  categoryKindsFor,
+  descendantIds,
+  type CategoryKind,
+  type Transaction,
+  type TransactionFilter,
+  type TransactionLine,
+  type transactionInputSchema,
+} from '@finance/shared';
+import { nowIso } from './context.js';
+import { badRequest, notFound } from './errors.js';
 
 interface TransactionRow extends Omit<Transaction, 'lines'> {}
 interface LineRow extends Omit<TransactionLine, 'tagIds'> {
@@ -135,4 +145,88 @@ export function filterTotals(sqlite: Database.Database, sql: FilterSql) {
     )
     .get(...sql.transactionParams, ...sql.lineParams) as { income: number; expense: number };
   return { ...row, net: row.income - row.expense };
+}
+
+export type TransactionWrite = z.output<typeof transactionInputSchema>;
+
+/**
+ * Creates and replaces transactions from validated input: checks the
+ * references, resolves `recipientName` (creating the recipient when needed)
+ * and writes the lines. Callers wrap the calls in a SQLite transaction.
+ */
+export function transactionWriter(sqlite: Database.Database) {
+  const exists = (table: string) => sqlite.prepare(`SELECT 1 FROM ${table} WHERE id = ?`);
+  const accountExists = exists('accounts');
+  const recipientExists = exists('recipients');
+  const tagExists = exists('tags');
+  const categoryKind = sqlite.prepare('SELECT kind FROM categories WHERE id = ?');
+  const recipientByName = sqlite.prepare('SELECT id FROM recipients WHERE lower(name) = lower(?)');
+  const insertRecipient = sqlite.prepare('INSERT INTO recipients (name, created_by, updated_by) VALUES (?, ?, ?)');
+  const byClientId = sqlite.prepare('SELECT id FROM transactions WHERE client_id = ?').pluck();
+  const insertTransaction = sqlite.prepare(
+    `INSERT INTO transactions (type, date, amount, account_id, to_account_id, recipient_id, description, status, client_id, created_by, updated_by)
+     VALUES (@type, @date, @amount, @accountId, @toAccountId, @recipientId, @description, @status, @clientId, @userId, @userId)`,
+  );
+  const updateTransaction = sqlite.prepare(
+    `UPDATE transactions SET type = @type, date = @date, amount = @amount, account_id = @accountId, to_account_id = @toAccountId,
+       recipient_id = @recipientId, description = @description, status = @status, updated_at = @now, updated_by = @userId
+     WHERE id = @id`,
+  );
+  const deleteLines = sqlite.prepare('DELETE FROM transaction_lines WHERE transaction_id = ?');
+  const insertLine = sqlite.prepare(
+    'INSERT INTO transaction_lines (transaction_id, category_id, amount, memo, sort_order) VALUES (?, ?, ?, ?, ?)',
+  );
+  const insertLineTag = sqlite.prepare('INSERT OR IGNORE INTO transaction_line_tags (line_id, tag_id) VALUES (?, ?)');
+
+  /** Checks references and resolves `recipientName`; returns the recipient id to store. */
+  const resolve = (input: TransactionWrite, userId: number): number | null => {
+    if (!accountExists.get(input.accountId)) throw badRequest('Account not found');
+    if (input.toAccountId != null && !accountExists.get(input.toAccountId)) throw badRequest('Destination account not found');
+    for (const line of input.lines) {
+      if (line.categoryId != null) {
+        const row = categoryKind.get(line.categoryId) as { kind: string } | undefined;
+        if (!row) throw badRequest('Category not found');
+        if (!categoryKindsFor(input.type).includes(row.kind as CategoryKind)) {
+          throw badRequest(`Use ${input.type} categories on an ${input.type} transaction`);
+        }
+      }
+      for (const tagId of line.tagIds) if (!tagExists.get(tagId)) throw badRequest('Tag not found');
+    }
+    if (input.recipientId != null) {
+      if (!recipientExists.get(input.recipientId)) throw badRequest('Recipient not found');
+      return input.recipientId;
+    }
+    if (input.recipientName) {
+      const found = recipientByName.get(input.recipientName) as { id: number } | undefined;
+      return found ? found.id : Number(insertRecipient.run(input.recipientName, userId, userId).lastInsertRowid);
+    }
+    return null;
+  };
+
+  const writeLines = (transactionId: number, input: TransactionWrite) => {
+    input.lines.forEach((line, i) => {
+      const lineId = insertLine.run(transactionId, line.categoryId, line.amount, line.memo, i).lastInsertRowid;
+      for (const tagId of line.tagIds) insertLineTag.run(lineId, tagId);
+    });
+  };
+
+  const amountOf = (input: TransactionWrite) =>
+    input.type === 'transfer' ? input.amount! : input.lines.reduce((sum, l) => sum + l.amount, 0);
+
+  return {
+    /** Id of the transaction created earlier with this clientId, if any. */
+    findByClientId: (clientId: string | null) => (clientId ? (byClientId.get(clientId) as number | undefined) : undefined),
+    create(input: TransactionWrite, userId: number): number {
+      const recipientId = resolve(input, userId);
+      const id = Number(insertTransaction.run({ ...input, recipientId, amount: amountOf(input), userId }).lastInsertRowid);
+      writeLines(id, input);
+      return id;
+    },
+    update(id: number, input: TransactionWrite, userId: number) {
+      const recipientId = resolve(input, userId);
+      updateTransaction.run({ ...input, id, recipientId, amount: amountOf(input), userId, now: nowIso() });
+      deleteLines.run(id);
+      writeLines(id, input);
+    },
+  };
 }

@@ -15,7 +15,7 @@ lines, recipients, nested categories, tags and reports. It replaces the old
 | 1. Foundation | Repo, SQLite schema (incl. users, roles, transactions, split lines, per-line tags), login, CRUD for accounts, categories, recipients, tags, deploy files | **Done** |
 | 2. Transactions | Entry/edit incl. splits, filtered list, saved filters, dashboard, offline entry | **Done** |
 | 3. Reports and migration | Seven reports, CSV/PDF export, migration from the old system (CSV import done) | Next |
-| 4. Later | Role editor, budgets, recurring transactions, receipts, bank CSV import | |
+| 4. Later | Role editor, budgets, recurring transactions, receipts, bank CSV import (Nordea done) | |
 
 ## Repository layout
 
@@ -183,15 +183,16 @@ All under `/api/v1`, JSON, same-origin session cookie.
 | Transactions | `GET/POST /transactions`, `GET/PUT/DELETE /transactions/:id` | See below |
 | Saved filters | `GET/POST /saved-filters`, `PATCH/DELETE /saved-filters/:id` | Per user; `filter` uses the list query fields |
 | Dashboard | `GET /dashboard?month=YYYY-MM` | Month and previous month totals, six-month trend, expense by top-level category, recent transactions |
-| Import | `POST /import/legacy` | CSV export of the old app, see below |
+| Import | `POST /import/legacy`, `POST /import/bank/preview`, `POST /import/bank/commit` | CSV export of the old app and bank CSV files, see below |
 
 ### Transactions
 
 - Amounts are integers in øre and always positive; the type gives the sign.
 - Expense and income have one or more `lines` (`categoryId`, `amount`, `memo`,
   `tagIds`); more than one line is a split. The amount is the sum of the lines
-  (if `amount` is sent too, it must match). Line categories must be of the same
-  kind as the transaction; `categoryId: null` is uncategorised.
+  (if `amount` is sent too, it must match). Expense lines use expense
+  categories; income lines use income or expense categories (a refund can go
+  back to the category it was spent in). `categoryId: null` is uncategorised.
 - Transfers have `toAccountId` and `amount` and no lines.
 - `recipientId`, or `recipientName` to use an existing recipient with that name
   (case-insensitive) or create one.
@@ -224,6 +225,35 @@ and needs `settings:admin`.
   merges into rows created here before the import.
 - Opening balances are 0, as in the old app; `raw/` and the old import rules are not used.
 - Keep exports out of git: `data_exports/` is ignored.
+
+### Importing a bank's CSV file
+
+**Transactions → Import from bank** takes the CSV file the bank's website
+exports (Nordea for now). Every row is shown for review first: tick which rows
+to import and change date, type (expense, income or transfer), recipient,
+category and description. Nothing is saved until **Import N transactions**.
+The review is kept in the browser's `localStorage`, so a reload loses nothing.
+
+- `POST /import/bank/preview` `{ content, fileName?, format?, accountId? }`
+  detects the format from the header row and returns each row with a
+  suggestion: type from the sign; recipient by name (case-insensitive) with its
+  default or last-used category; a transfer when the other account number is
+  written in one of our accounts' name or notes; and `duplicateOf` when the
+  account already has a transaction with the same date and amount (those rows
+  start unselected). Reserved (not yet booked) rows have no date and start
+  unselected too. Writes nothing.
+- `POST /import/bank/commit` `{ rows: [{ line, transaction }], saveRecipientDefaults }`
+  takes normal transaction bodies and saves them in one database transaction:
+  an invalid row saves nothing and the error names its line. Rows carry a
+  `clientId`, so a retry does not duplicate. With `saveRecipientDefaults`, a
+  recipient without a default category gets the category chosen for it.
+- Both need `transactions:write`.
+- Accounts have no account number field. Put the number (e.g. `6580.70.56411`)
+  in the account's name or notes and the account is picked automatically; the
+  browser also remembers the account chosen for each number.
+- Another bank: add a parser in `apps/api/src/lib/bankImport/` implementing
+  `BankFormatParser` (`format.ts`), list it in `formats.ts`, and add its id to
+  `BANK_FORMATS` in `@finance/shared`.
 
 ## Offline use
 

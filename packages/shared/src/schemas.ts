@@ -227,3 +227,33 @@ export const legacyImportInputSchema = z.object({
   dryRun: z.boolean().default(false),
 });
 export type LegacyImportInput = z.input<typeof legacyImportInputSchema>;
+
+// ---- Bank import ----
+/** Bank export formats the importer reads; detected from the header row when not given. */
+export const BANK_FORMATS = ['nordea'] as const;
+export type BankFormat = (typeof BANK_FORMATS)[number];
+
+/** Parses a bank's CSV export into suggested transactions. Nothing is saved. */
+export const bankImportPreviewSchema = z.object({
+  fileName: z.string().trim().max(255).optional().nullable().transform((v) => v ?? null),
+  content: z.string().min(1, 'The file is empty').max(10 * 1024 * 1024, 'The file is too large'),
+  format: z.enum(BANK_FORMATS).optional(),
+  /** The account the file belongs to; guessed from the account number in the file when empty. */
+  accountId: idSchema.optional(),
+});
+export type BankImportPreviewInput = z.input<typeof bankImportPreviewSchema>;
+
+/**
+ * Saves the reviewed rows in one go: either all of them or none. Each row is
+ * a normal transaction (validated with transactionInputSchema on the server);
+ * `line` is the row's line in the file, for error messages.
+ */
+export const bankImportCommitSchema = z.object({
+  rows: z
+    .array(z.object({ line: z.number().int().min(1), transaction: z.unknown() }))
+    .min(1, 'Choose at least one row to import')
+    .max(5000),
+  /** Use each row's category as its recipient's default category when the recipient has none. */
+  saveRecipientDefaults: z.boolean().default(true),
+});
+export type BankImportCommitInput = z.input<typeof bankImportCommitSchema>;

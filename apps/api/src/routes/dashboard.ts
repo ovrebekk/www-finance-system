@@ -23,10 +23,13 @@ export function dashboardRoutes(app: FastifyInstance, ctx: AppContext) {
             COALESCE(SUM(CASE WHEN type = 'expense' THEN amount END), 0) AS expense
      FROM transactions WHERE date >= ? AND date < ? GROUP BY 1`,
   );
+  /** Expense lines, less income lines in expense categories (refunds). */
   const expenseLines = sqlite.prepare(
-    `SELECT l.category_id AS categoryId, SUM(l.amount) AS amount
+    `SELECT l.category_id AS categoryId, SUM(CASE WHEN t.type = 'expense' THEN l.amount ELSE -l.amount END) AS amount
      FROM transactions t JOIN transaction_lines l ON l.transaction_id = t.id
-     WHERE t.type = 'expense' AND t.date >= ? AND t.date < ? GROUP BY l.category_id`,
+     LEFT JOIN categories c ON c.id = l.category_id
+     WHERE (t.type = 'expense' OR (t.type = 'income' AND c.kind = 'expense')) AND t.date >= ? AND t.date < ?
+     GROUP BY l.category_id`,
   );
   const categoryParents = sqlite.prepare('SELECT id, parent_id AS parentId FROM categories');
   const recentIds = sqlite.prepare('SELECT id FROM transactions ORDER BY date DESC, id DESC LIMIT 8');
@@ -63,7 +66,9 @@ export function dashboardRoutes(app: FastifyInstance, ctx: AppContext) {
       const key = line.categoryId == null ? null : rootOf(line.categoryId);
       totals.set(key, (totals.get(key) ?? 0) + line.amount);
     }
+    // A category whose refunds this month outweigh its spending has nothing to show.
     const expenseByCategory = [...totals]
+      .filter(([, amount]) => amount > 0)
       .map(([categoryId, amount]) => ({ categoryId, amount }))
       .sort((a, b) => b.amount - a.amount);
 

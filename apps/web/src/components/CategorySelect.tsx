@@ -1,6 +1,6 @@
 import { buildCategoryTree, descendantIds, flattenTree, type Category, type CategoryKind } from '@finance/shared';
 
-/** Indented category picker; optionally limited to one kind and excluding a subtree. */
+/** Indented category picker; optionally limited to one or more kinds (in that order) and excluding a subtree. */
 export function CategorySelect({
   categories,
   value,
@@ -14,14 +14,14 @@ export function CategorySelect({
   categories: Category[];
   value: number | null;
   onChange: (id: number | null) => void;
-  kind?: CategoryKind;
+  kind?: CategoryKind | CategoryKind[];
   excludeSubtreeOf?: number;
   emptyLabel?: string;
   allowEmpty?: boolean;
   id?: string;
 }) {
   const excluded = excludeSubtreeOf !== undefined ? descendantIds(categories, excludeSubtreeOf) : new Set<number>();
-  const groups: CategoryKind[] = kind ? [kind] : ['expense', 'income'];
+  const groups: CategoryKind[] = Array.isArray(kind) ? kind : kind ? [kind] : ['expense', 'income'];
   const options = (k: CategoryKind) =>
     flattenTree(buildCategoryTree(categories.filter((c) => c.kind === k && (!c.archived || c.id === value))))
       .filter((c) => !excluded.has(c.id))

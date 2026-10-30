@@ -1,4 +1,4 @@
-import type { AccountType, CategoryKind, TransactionFilter, TransactionStatus, TransactionType } from './schemas.js';
+import type { AccountType, BankFormat, CategoryKind, TransactionFilter, TransactionStatus, TransactionType } from './schemas.js';
 import type { Permission } from './permissions.js';
 
 export interface Me {
@@ -117,7 +117,7 @@ export interface Dashboard {
   month: string;
   current: MonthSummary;
   previous: MonthSummary;
-  /** Expense per top-level category this month, largest first. */
+  /** Expense per top-level category this month, less income booked to expense categories (refunds); largest first. */
   expenseByCategory: CategoryTotal[];
   /** Last six months, oldest first, including this one. */
   trend: MonthSummary[];
@@ -146,4 +146,57 @@ export interface LegacyImportReport {
   counts: Record<LegacyImportTable, LegacyImportCounts>;
   /** What the importer changed on the way, e.g. recipients merged by name. */
   notes: string[];
+}
+
+/** One row of a bank file, as the bank wrote it, plus what the importer suggests. */
+export interface BankImportRow {
+  /** Line in the file (the header is line 1). */
+  line: number;
+  /** YYYY-MM-DD; null for a reserved row that the bank has not booked yet. */
+  date: string | null;
+  /** Signed øre: negative is money out of the account. */
+  amount: number;
+  currency: string;
+  /** Name of the other party as the bank shows it. */
+  counterparty: string | null;
+  /** Message, KID or other text on the row. */
+  text: string | null;
+  /** The bank's payment type, e.g. "Avtalegiro". */
+  bankType: string | null;
+  otherAccountNumber: string | null;
+  reserved: boolean;
+  suggestion: {
+    type: TransactionType;
+    /** Existing recipient with this name, or null for a new one. */
+    recipientId: number | null;
+    recipientName: string | null;
+    categoryId: number | null;
+    /** Transfers: the other account (source for money in, destination for money out). */
+    otherAccountId: number | null;
+    description: string | null;
+  };
+  /** An existing transaction on the account with the same date and amount. */
+  duplicateOf: number | null;
+  warnings: string[];
+}
+
+export interface BankImportPreview {
+  format: BankFormat;
+  formatLabel: string;
+  /** Account number the file belongs to, when the file shows it. */
+  accountNumber: string | null;
+  /** The chosen or guessed account; null when no account matches the number. */
+  accountId: number | null;
+  rows: BankImportRow[];
+  /** Lines the importer could not read, e.g. a row without an amount. */
+  problems: string[];
+}
+
+export interface BankImportResult {
+  created: number;
+  ids: number[];
+  /** Recipients created for names that did not exist yet. */
+  recipientsCreated: number;
+  /** Recipients that got a default category from this import. */
+  defaultsSaved: number;
 }

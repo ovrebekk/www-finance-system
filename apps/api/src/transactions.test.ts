@@ -125,6 +125,15 @@ describe('transactions', () => {
     expect((sqlite.prepare('SELECT COUNT(*) AS n FROM transactions').get() as { n: number }).n).toBe(0);
   });
 
+  it('lets income use expense categories, but not the other way round', async () => {
+    const refund = await api.post('/api/v1/transactions', expense({ type: 'income', lines: [{ categoryId: ids.groceries, amount: 5000 }] }));
+    expect(refund.statusCode, refund.body).toBe(201);
+    expect(refund.json().lines[0].categoryId).toBe(ids.groceries);
+    const salaryOnExpense = await api.post('/api/v1/transactions', expense({ lines: [{ categoryId: ids.salary, amount: 5000 }] }));
+    expect(salaryOnExpense.statusCode).toBe(400);
+    expect(salaryOnExpense.json().message).toBe('Use expense categories on an expense transaction');
+  });
+
   it('allows uncategorised lines and checks a total against the lines', async () => {
     const res = await api.post('/api/v1/transactions', expense({ amount: 300, lines: [{ amount: 100 }, { amount: 200 }] }));
     expect(res.statusCode).toBe(201);
@@ -278,5 +287,19 @@ describe('dashboard', () => {
     expect(d.recent[0]).toMatchObject({ type: 'transfer' });
     expect(d.recent).toHaveLength(5);
     expect((await api.get('/api/v1/dashboard?month=2026-13')).statusCode).toBe(400);
+  });
+
+  it('nets refunds (income in an expense category) out of category spending', async () => {
+    await api.post('/api/v1/transactions', expense({ lines: [{ categoryId: ids.groceries, amount: 3000 }, { categoryId: ids.cafe, amount: 500 }] }));
+    const income = (lines: unknown[]) => ({ type: 'income', date: '2026-10-20', accountId: ids.checking, lines });
+    await api.post('/api/v1/transactions', income([{ categoryId: ids.groceries, amount: 1000 }]));
+    await api.post('/api/v1/transactions', income([{ categoryId: ids.cafe, amount: 800 }]));
+    await api.post('/api/v1/transactions', income([{ amount: 400 }, { categoryId: ids.salary, amount: 600 }]));
+
+    const d = (await api.get('/api/v1/dashboard?month=2026-10')).json();
+    // Month totals still count the refunds as income.
+    expect(d.current).toEqual({ month: '2026-10', income: 2800, expense: 3500, net: -700 });
+    // Food is 3000 - 1000; Kafé is refunded more than it cost, so it drops out; uncategorised income is not spending.
+    expect(d.expenseByCategory).toEqual([{ categoryId: ids.food, amount: 2000 }]);
   });
 });

@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import {
   buildCategoryTree,
   flattenTree,
@@ -92,9 +92,14 @@ export function TransactionsPage() {
       <PageHeader
         title="Transactions"
         actions={
-          <button type="button" className="button button-primary" onClick={() => setEditing({ mode: 'new' })}>
-            + Add transaction
-          </button>
+          <>
+            <Link className="button" to="/transactions/import">
+              Import from bank
+            </Link>
+            <button type="button" className="button button-primary" onClick={() => setEditing({ mode: 'new' })}>
+              + Add transaction
+            </button>
+          </>
         }
       />
 

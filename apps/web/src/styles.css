@@ -335,3 +335,28 @@ input[type='color'] { width: 44px; padding: 2px; }
 .queued-section { margin-bottom: 1rem; }
 .queued-section h2 { font-size: 1rem; }
 .badge-warn { background: var(--danger-soft); color: var(--danger); }
+
+/* ---- Bank import ---- */
+.page-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.import-table td { vertical-align: top; }
+.import-table input:not([type='checkbox']), .import-table select { min-height: 36px; padding: 0.3rem 0.45rem; font-size: 0.9rem; width: 100%; min-width: 0; }
+.import-table td[data-label='Date'] input { min-width: 9.5rem; }
+.import-table td[data-label='Type'] select { min-width: 7.5rem; }
+.import-table td[data-label='Import'] { width: 1%; padding-top: 0.85rem; }
+.import-table td.num { padding-top: 0.8rem; }
+.import-table tr.excluded td:not([data-label='Import']) { opacity: 0.5; }
+.import-notes { display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; margin-top: 0.25rem; }
+@media (max-width: 640px) {
+  .import-table td { align-items: center; }
+  .import-table td > input:not([type='checkbox']), .import-table td > select { max-width: 65%; }
+  .import-table td[data-label='Description'] { flex-wrap: wrap; }
+  .import-table td[data-label='Description'] .import-notes { flex-basis: 100%; }
+}
+.table-scroll { overflow-x: auto; margin-bottom: 1rem; }
+.table-scroll .data-table { margin: 0; }
+@media (min-width: 641px) {
+  .import-table td[data-label='Recipient'] input, .import-table td[data-label='Account'] select { min-width: 11rem; }
+  .import-table td[data-label='Category'] select { min-width: 10rem; }
+  .import-table td[data-label='Description'] { min-width: 12rem; }
+}
+.content:has(.import-table) { max-width: 1320px; }

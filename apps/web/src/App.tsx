@@ -6,6 +6,7 @@ import { keys, useMe } from './lib/queries';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
 import { AccountsPage } from './pages/AccountsPage';
+import { BankImportPage } from './pages/BankImportPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
@@ -43,6 +44,7 @@ export function App() {
       <Route element={<Layout />}>
         <Route index element={<DashboardPage />} />
         <Route path="transactions" element={<TransactionsPage />} />
+        <Route path="transactions/import" element={<BankImportPage />} />
         <Route path="accounts" element={<AccountsPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="recipients" element={<RecipientsPage />} />

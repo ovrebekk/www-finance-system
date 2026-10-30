@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
+  categoryKindsFor,
   formatAmount,
   formatNok,
   parseAmount,
@@ -122,16 +123,17 @@ export function TransactionForm({
 
   const changeType = (t: TransactionType) => {
     setType(t);
-    // Categories are per kind, so clear the ones that no longer fit.
+    // Clear the categories the new type cannot use (income may also use expense categories).
     const kindOf = new Map((categories.data ?? []).map((c) => [c.id, c.kind]));
-    setLines((ls) => ls.map((l) => (l.categoryId != null && kindOf.get(l.categoryId) !== t ? { ...l, categoryId: null } : l)));
+    const allowed = categoryKindsFor(t);
+    setLines((ls) => ls.map((l) => (l.categoryId != null && !allowed.includes(kindOf.get(l.categoryId)!) ? { ...l, categoryId: null } : l)));
   };
 
   const changeRecipient = (name: string) => {
     setRecipient(name);
     const match = recipientByName.get(name.trim().toLocaleLowerCase('nb'));
     const category = match?.defaultCategoryId != null ? categories.data?.find((c) => c.id === match.defaultCategoryId) : undefined;
-    if (!split && category && category.kind === type && lines[0]?.categoryId == null) {
+    if (!split && category && categoryKindsFor(type).includes(category.kind) && lines[0]?.categoryId == null) {
       updateLine(lines[0]!.key, { categoryId: category.id });
     }
   };
@@ -274,7 +276,7 @@ export function TransactionForm({
             <Field label="Category">
               <CategorySelect
                 categories={categories.data ?? []}
-                kind={type}
+                kind={categoryKindsFor(type)}
                 value={lines[0]?.categoryId ?? null}
                 onChange={(id) => updateLine(lines[0]!.key, { categoryId: id })}
                 emptyLabel="— Uncategorised —"
@@ -298,7 +300,7 @@ export function TransactionForm({
                 <div className="split-line-main">
                   <CategorySelect
                     categories={categories.data ?? []}
-                    kind={type}
+                    kind={categoryKindsFor(type)}
                     value={l.categoryId}
                     onChange={(id) => updateLine(l.key, { categoryId: id })}
                     emptyLabel="— Uncategorised —"

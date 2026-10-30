@@ -1,6 +1,9 @@
 import type Database from 'better-sqlite3';
 import {
   ACCOUNT_TYPES,
+  categoryKindsFor,
+  type CategoryKind,
+  type TransactionType,
   CATEGORY_KINDS,
   TRANSACTION_STATUSES,
   TRANSACTION_TYPES,
@@ -9,7 +12,10 @@ import {
   type LegacyImportReport,
   type LegacyImportTable,
 } from '@finance/shared';
+import { parseCsv } from './csv.js';
 import { badRequest } from './errors.js';
+
+export { parseCsv };
 
 /**
  * Imports the CSV folder that the old PersonalFinanceWPF app exports
@@ -28,42 +34,6 @@ const DEFAULT_TAG_COLOR = '#64748b';
 
 type Files = Partial<Record<LegacyExportFile, string>>;
 type Row = Record<string, string>;
-
-/** RFC 4180: comma separator, "" escapes inside quotes, CRLF or LF line ends, quoted fields may span lines. */
-export function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = '';
-  let quoted = false;
-  let i = text.charCodeAt(0) === 0xfeff ? 1 : 0;
-  for (; i < text.length; i++) {
-    const c = text[i];
-    if (quoted) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else quoted = false;
-      } else field += c;
-    } else if (c === '"') quoted = true;
-    else if (c === ',') {
-      row.push(field);
-      field = '';
-    } else if (c === '\n' || c === '\r') {
-      if (c === '\r' && text[i + 1] === '\n') i++;
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = '';
-    } else field += c;
-  }
-  if (quoted) throw badRequest('A CSV file ends inside a quoted field');
-  if (field !== '' || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows;
-}
 
 class Problems {
   readonly list: string[] = [];
@@ -488,7 +458,7 @@ export function importLegacyExport(
             if (catLegacy) {
               const cat = categoryIds.get(catLegacy);
               if (!cat) return problems.add(`${lw}: category_legacy_id ${catLegacy} is not in categories.csv`);
-              if (cat.kind !== type) return problems.add(`${lw}: ${cat.kind} category on ${type} transaction ${legacyId}`);
+              if (!categoryKindsFor(type as TransactionType).includes(cat.kind as CategoryKind)) return problems.add(`${lw}: ${cat.kind} category on ${type} transaction ${legacyId}`);
               categoryId = cat.id;
             }
             parsedLines.push({ categoryId, amount: Number(l.amount), memo: nullable(l.memo!), lineNo });

@@ -1,4 +1,13 @@
+import type { CategoryKind, TransactionType } from './schemas.js';
 import type { Category } from './types.js';
+
+/**
+ * Category kinds a transaction of this type may use. Income can also go to an
+ * expense category, e.g. a refund or a share of a bill paid back.
+ */
+export function categoryKindsFor(type: TransactionType): CategoryKind[] {
+  return type === 'income' ? ['income', 'expense'] : type === 'expense' ? ['expense'] : [];
+}
 
 export interface CategoryNode extends Category {
   children: CategoryNode[];
